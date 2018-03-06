@@ -5,19 +5,24 @@ from build_model import build_UNet2D_4L
 import pandas as pd
 from keras.utils.vis_utils import plot_model
 from keras.callbacks import ModelCheckpoint
+import os
 
 if __name__ == '__main__':
-
+    root = '/Volumes/auri\'s home-3'
+    path = root + '/JSRT/new/'
+    y = [s for s in os.listdir(path) if not s.endswith('msk.png')]
+    df = pd.DataFrame({'filename':y})
+    df['mask filename'] = df.apply(lambda row: str(row.filename).replace('.png' , 'msk.png'), axis=1)
     # Path to csv-file. File should contain X-ray filenames as first column,
     # mask filenames as second column.
-    csv_path = '/path/to/JSRT/idx.csv'
+    #csv_path = '/path/to/JSRT/idx.csv'
     # Path to the folder with images. Images will be read from path + path_from_csv
-    path = csv_path[:csv_path.rfind('/')] + '/'
+    #path = csv_path[:csv_path.rfind('/')] + '/'
 
-    df = pd.read_csv(csv_path)
+    #df = pd.read_csv(csv_path)
     # Shuffle rows in dataframe. Random state is set for reproducibility.
     df = df.sample(frac=1, random_state=23)
-    n_train = int(len(df))
+    n_train = int(len(df)*0.8)
     df_train = df[:n_train]
     df_val = df[n_train:]
 
@@ -36,7 +41,7 @@ if __name__ == '__main__':
 
     ##########################################################################################
     model_file_format = 'model.{epoch:03d}.hdf5'
-    print model_file_format
+    print (model_file_format)
     checkpointer = ModelCheckpoint(model_file_format, period=10)
 
     train_gen = ImageDataGenerator(rotation_range=10,
