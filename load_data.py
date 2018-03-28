@@ -14,10 +14,11 @@ It may be more convenient to store preprocessed data for faster loading.
 Dataframe should contain paths to images and masks as two columns (relative to `path`).
 """
 
-def loadDataJSRT(df, path, im_shape):
+def loadDataJSRT(df, path, im_shape, n_images = None):
     """This function loads data preprocessed with `preprocess_JSRT.py`"""
     X, y = [], []
-    for i, item in df.iterrows():
+    images = df.iterrows() if n_images is None else df[:n_images].iterrows()
+    for i, item in images:
         img = io.imread(path + item[0])
         img = transform.resize(img, im_shape)
         img = np.expand_dims(img, -1)
@@ -69,10 +70,11 @@ def loadDataMontgomery(df, path, im_shape):
     return X, y
 
 
-def loadDataGeneral(df, path, im_shape):
+def loadDataGeneral(df, path, im_shape, n_images = None):
     """Function for loading arbitrary data in standard formats"""
     X, y = [], []
-    for i, item in df.iterrows():
+    images = df.iterrows() if n_images is None else df[:n_images].iterrows()
+    for i, item in images:
         img = img_as_float(io.imread(path + item[0]))
         if os.path.isfile(path + item[1]):
             mask = io.imread(path + item[1])

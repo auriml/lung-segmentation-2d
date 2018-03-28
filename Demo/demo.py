@@ -89,7 +89,7 @@ if __name__ == '__main__':
     inp_shape = X[0].shape
 
     # Load model
-    model_name = '../trained_model.hdf5'
+    model_name = '../UNet_trained_model.hdf5'
     UNet = load_model(model_name)
 
     # For inference standard keras ImageGenerator can be used.
