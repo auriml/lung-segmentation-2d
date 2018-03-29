@@ -12,6 +12,7 @@ from keras.layers.merge import concatenate
 from keras.layers import Input, Convolution2D, MaxPooling2D, UpSampling2D
 from keras.preprocessing.image import ImageDataGenerator
 from skimage import morphology, color, io, exposure
+from keras.models import load_model
 
 from keras.models import Sequential, Model
 from keras.optimizers import Adam
@@ -50,8 +51,12 @@ class GAN():
             metrics=['accuracy'])
 
         # Build and compile the generator
-        self.generator = self.build_generator()
-        self.generator.compile(loss='binary_crossentropy', optimizer=optimizer)
+        #self.generator = self.build_generator()
+        #self.generator.compile(loss='binary_crossentropy', optimizer=optimizer)
+
+        #Load pretrained generator
+        # Load model
+        self.generator = load_model('gan_generator_model.hdf5')
 
 
         #z = Input(shape=(100,)) #noise as input in classical GAN
@@ -298,6 +303,16 @@ class GAN():
         #X_train, X_masks_train = loadDataJSRT(df_train, path, im_shape, n_images=10) #TODO: n_images is only for testing/debugging
         X_train, X_masks_train = loadDataJSRT(df_train, path, im_shape)
 
+        train_gen = ImageDataGenerator(rotation_range=10,
+                                       width_shift_range=0.1,
+                                       height_shift_range=0.1,
+                                       rescale=1.,
+                                       zoom_range=0.2,
+                                       fill_mode='nearest',
+                                       cval=0)
+
+        test_gen = ImageDataGenerator(rescale=1.)
+
 
         #(X_train, _), (_, _) = mnist.load_data()
 
@@ -318,49 +333,54 @@ class GAN():
 
             k = 5 # a constant, how many times we train gen more than dis
             for iteration, id in enumerate( indexes):
-                X_train_batch, X_masks_train_batch = X_train[id], X_masks_train[id]
-                if iteration % k ==0:
+                for X_train_batch, X_masks_train_batch in train_gen.flow(X_train[id], X_masks_train[id], batch_size=batch_size, shuffle=True):
+                    if iteration % k ==0:
+
+                        # ---------------------
+                        #  Train Discriminator
+                        # ---------------------
+
+                        # Select half batch of masks
+                        masks = X_masks_train_batch[:half_batch]
+
+
+                        # Generate a half batch of images from noise
+                        #noise = np.random.normal(0, 1, (half_batch, 100))
+                        #gen_imgs = self.generator.predict(noise)
+
+                        # Generate a half batch of new masks from images
+                        # Select a random?? half batch of images or same images that originated the true discriminator masks above? TODO: test both alternatives
+                        imgs = X_train_batch[half_batch:]
+                        gen_masks = self.generator.predict(imgs)
+
+                        # Train the discriminator
+                        d_loss_real = self.discriminator.train_on_batch(masks, np.ones((half_batch, 1)))
+                        d_loss_fake = self.discriminator.train_on_batch(gen_masks, np.zeros((half_batch, 1)))
+                        d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
+
 
                     # ---------------------
-                    #  Train Discriminator
+                    #  Train Generator
                     # ---------------------
 
-                    # Select half batch of masks
-                    masks = X_masks_train_batch[:half_batch]
+                    #noise = np.random.normal(0, 1, (batch_size, 100))
+                    imgs = X_train_batch[:batch_size]
+
+                    # The generator wants the discriminator to label the generated samples
+                    # as valid (ones)
+                    valid_y = np.array([1] * batch_size)
+
+                    # Train the generator
+                    g_loss = self.combined.train_on_batch(imgs, valid_y)
+
+                    # Plot the progress
+                    print ("%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss))
+
+                    iteration +=1
 
 
-                    # Generate a half batch of images from noise
-                    #noise = np.random.normal(0, 1, (half_batch, 100))
-                    #gen_imgs = self.generator.predict(noise)
-
-                    # Generate a half batch of new masks from images
-                    # Select a random?? half batch of images or same images that originated the true discriminator masks above? TODO: test both alternatives
-                    imgs = X_train_batch[half_batch:]
-                    gen_masks = self.generator.predict(imgs)
-
-                    # Train the discriminator
-                    d_loss_real = self.discriminator.train_on_batch(masks, np.ones((half_batch, 1)))
-                    d_loss_fake = self.discriminator.train_on_batch(gen_masks, np.zeros((half_batch, 1)))
-                    d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
-
-
-                # ---------------------
-                #  Train Generator
-                # ---------------------
-
-                #noise = np.random.normal(0, 1, (batch_size, 100))
-                imgs = X_train_batch[:batch_size]
-
-                # The generator wants the discriminator to label the generated samples
-                # as valid (ones)
-                valid_y = np.array([1] * batch_size)
-
-                # Train the generator
-                g_loss = self.combined.train_on_batch(imgs, valid_y)
-
-                # Plot the progress
-                print ("%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss))
-
+                    if iteration == len(indexes): #arbitray number of n times data augmentation (change to 1 to not increase training set)
+                        break
             # If at save interval => save generated image samples
             if epoch % save_interval == 0:
                 self.save_imgs(epoch)
@@ -421,7 +441,7 @@ class GAN():
 if __name__ == '__main__':
     gan = GAN()
     #gan.train(epochs=30000, batch_size=32, save_interval=200)
-    gan.train(epochs=350, batch_size=10, save_interval=25)
+    gan.train(epochs=350, batch_size=8, save_interval=25)
 
 
 

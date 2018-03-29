@@ -35,7 +35,9 @@ def masked_withGT(img, gt, mask, alpha=1):
     filled with blue."""
     rows, cols = img.shape
     color_mask = np.zeros((rows, cols, 3))
-    boundary = morphology.dilation(gt, morphology.disk(3)) - gt
+    dilation = morphology.dilation(gt, morphology.disk(3))
+    boundary = np.subtract(dilation, gt, dtype=np.float)
+    #boundary = morphology.dilation(gt, morphology.disk(3)) - gt
     color_mask[mask == 1] = [0, 0, 1]
     color_mask[boundary == 1] = [1, 0, 0]
     img_color = np.dstack((img, img, img))
@@ -167,6 +169,6 @@ def segment_SanJuan_dataset(model_name = 'UNet_trained_model.hdf5', im_shape = (
 if __name__ == '__main__':
 
     #test_benchmark_JSRT(model_name='UNet_trained_model.hdf5', im_shape = (256, 256))
-    #test_benchmark_JSRT(model_name='gan_generator_model.hdf5' , im_shape= (400,400))
-    segment_SanJuan_dataset(model_name='UNet_trained_model.hdf5' , im_shape= (256,256) , n_images = 30)
+    test_benchmark_JSRT(model_name='gan_generator_model.hdf5' , im_shape= (400,400))
+    #segment_SanJuan_dataset(model_name='UNet_trained_model.hdf5' , im_shape= (256,256) , n_images = 30)
     segment_SanJuan_dataset(model_name='gan_generator_model.hdf5' , im_shape= (400,400) , n_images = 30)
