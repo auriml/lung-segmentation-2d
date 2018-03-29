@@ -2,7 +2,7 @@ from __future__ import print_function, division
 
 from keras.datasets import mnist
 from load_data import loadDataMontgomery, loadDataJSRT, loadDataGeneral
-from inference import remove_small_regions, masked
+from inference import remove_small_regions, masked, test_benchmark_JSRT
 from keras import layers
 from keras.layers import Input, Dense, Reshape, Flatten, Dropout
 from keras.layers import BatchNormalization, Activation, ZeroPadding2D
@@ -327,7 +327,9 @@ class GAN():
             # on the segmentation network for each optimization step on the critic network.
             indexes = list(range(X_train.shape[0]))
             np.random.shuffle(indexes)
-            indexes = np.array_split(indexes, [batch_size])
+            #indexes = np.array_split(indexes, [batch_size])
+            indexes = np.split(indexes, [batch_size])
+            indexes = [x for x in indexes if x != []]
 
             d_loss = None
 
@@ -335,7 +337,7 @@ class GAN():
             for iteration, id in enumerate( indexes):
                 for X_train_batch, X_masks_train_batch in train_gen.flow(X_train[id], X_masks_train[id], batch_size=batch_size, shuffle=True):
                     if iteration % k ==0:
-
+                        print(str(epoch) + "-training discriminator")
                         # ---------------------
                         #  Train Discriminator
                         # ---------------------
@@ -362,7 +364,7 @@ class GAN():
                     # ---------------------
                     #  Train Generator
                     # ---------------------
-
+                    print(str(epoch) + "-training generator")
                     #noise = np.random.normal(0, 1, (batch_size, 100))
                     imgs = X_train_batch[:batch_size]
 
@@ -384,6 +386,10 @@ class GAN():
             # If at save interval => save generated image samples
             if epoch % save_interval == 0:
                 self.save_imgs(epoch)
+                self.combined.save('gan_combined_model.hdf5')
+                self.generator.save('gan_discriminator_model.hdf5')
+                self.generator.save('gan_generator_model_post.hdf5')
+                test_benchmark_JSRT(model_name='gan_generator_model_post.hdf5' , im_shape= (400,400))
 
     def save_imgs(self, epoch):
         path = root + '/Rx-thorax-automatic-captioning/image_dir_processed/'
@@ -416,7 +422,7 @@ class GAN():
 
             # Remove regions smaller than 2% of the image
             pr = remove_small_regions(pr, 0.02 * np.prod(im_shape))
-            io.imsave(os.getcwd() + '/gan_results/{}'.format(df.iloc[i][0]), masked(img,  pr, 1))
+            io.imsave(os.getcwd() + '/gan_results/{}'.format(str(epoch) + '-' + df.iloc[i][0]), masked(img,  pr, 1))
             i += 1
 
 
@@ -441,7 +447,7 @@ class GAN():
 if __name__ == '__main__':
     gan = GAN()
     #gan.train(epochs=30000, batch_size=32, save_interval=200)
-    gan.train(epochs=350, batch_size=8, save_interval=25)
+    gan.train(epochs=350, batch_size=10, save_interval=25)
 
 
 

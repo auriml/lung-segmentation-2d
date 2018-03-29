@@ -122,9 +122,9 @@ def test_benchmark_JSRT(model_name = 'UNet_trained_model.hdf5', im_shape = (256,
         if i == n_test:
             break
 
-
-    print (model_name + ' Mean IoU:', ious.mean())
-    print (model_name + ' Mean Dice:', dices.mean())
+    f = open('test_benchmark_JSRT', 'a')
+    f.write(model_name + ' Mean IoU:'+ str(ious.mean()))
+    f.write(model_name + ' Mean Dice:'+ str(dices.mean()) )
 
 
 def segment_SanJuan_dataset(model_name = 'UNet_trained_model.hdf5', im_shape = (256, 256), n_images = None):
@@ -170,5 +170,6 @@ if __name__ == '__main__':
 
     #test_benchmark_JSRT(model_name='UNet_trained_model.hdf5', im_shape = (256, 256))
     test_benchmark_JSRT(model_name='gan_generator_model.hdf5' , im_shape= (400,400))
+    test_benchmark_JSRT(model_name='gan_generator_model_post.hdf5' , im_shape= (400,400))
     #segment_SanJuan_dataset(model_name='UNet_trained_model.hdf5' , im_shape= (256,256) , n_images = 30)
-    segment_SanJuan_dataset(model_name='gan_generator_model.hdf5' , im_shape= (400,400) , n_images = 30)
+    #segment_SanJuan_dataset(model_name='gan_generator_model.hdf5' , im_shape= (400,400) , n_images = 30)
