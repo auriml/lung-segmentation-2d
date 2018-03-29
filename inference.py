@@ -123,8 +123,9 @@ def test_benchmark_JSRT(model_name = 'UNet_trained_model.hdf5', im_shape = (256,
             break
 
     f = open('test_benchmark_JSRT', 'a')
-    f.write(model_name + ' Mean IoU:'+ str(ious.mean()))
-    f.write(model_name + ' Mean Dice:'+ str(dices.mean()) )
+    f.write(model_name + ' Mean IoU:'+ str(ious.mean()) +'\n')
+    f.write(model_name + ' Mean Dice:'+ str(dices.mean())+'\n' )
+    f.close()
 
 
 def segment_SanJuan_dataset(model_name = 'UNet_trained_model.hdf5', im_shape = (256, 256), n_images = None):

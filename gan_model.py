@@ -389,6 +389,9 @@ class GAN():
                 self.combined.save('gan_combined_model.hdf5')
                 self.generator.save('gan_discriminator_model.hdf5')
                 self.generator.save('gan_generator_model_post.hdf5')
+                f = open('test_benchmark_JSRT', 'a')
+                f.write("Epoch " + str(epoch) )
+                f.close()
                 test_benchmark_JSRT(model_name='gan_generator_model_post.hdf5' , im_shape= (400,400))
 
     def save_imgs(self, epoch):
@@ -447,7 +450,7 @@ class GAN():
 if __name__ == '__main__':
     gan = GAN()
     #gan.train(epochs=30000, batch_size=32, save_interval=200)
-    gan.train(epochs=350, batch_size=10, save_interval=25)
+    gan.train(epochs=350, batch_size=8, save_interval=25)
 
 
 
