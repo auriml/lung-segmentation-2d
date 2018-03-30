@@ -357,7 +357,7 @@ def dice_coef_loss(y_true, y_pred):
 if __name__ == '__main__':
     gan = GAN()
     #gan.train(epochs=30000, batch_size=32, save_interval=200)
-    gan.train(epochs=350, batch_size=4, save_interval=25)
+    gan.train(epochs=350, batch_size=10, save_interval=25)
 
 
 
