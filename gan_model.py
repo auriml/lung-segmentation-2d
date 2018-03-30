@@ -281,15 +281,22 @@ class GAN():
                     g_loss = self.combined.train_on_batch(X_train_batch, label_dict)
 
                     # Plot the progress
-                    print ("%d [D loss: %f, acc.: %.2f%%] " % (epoch, d_loss[0], 100*d_loss[1]))
+                    message = "%d [D loss: %f, acc.: %.2f%%] " % (epoch, d_loss[0], 100*d_loss[1])
+                    print (message)
+                    f = open('test_benchmark_JSRT', 'a')
+                    f.write(message )
+                    f.close()
 
                     metric_names = self.combined.metrics_names
                     log_message = "%d:" % iteration
                     for metric_index in range(len(metric_names)):
                         train_process_util.update_metrics_dict(metric_names[metric_index], g_loss[metric_index])
-                        message = "%s: %f---" % ( metric_names[metric_index], g_loss[metric_index])
+                        message = "%s: %f   " % ( metric_names[metric_index], g_loss[metric_index])
                         log_message += message
                     print(log_message)
+                    f = open('test_benchmark_JSRT', 'a')
+                    f.write(log_message )
+                    f.close()
                     iteration +=1
 
 
@@ -306,7 +313,7 @@ class GAN():
                 f.close()
                 test_benchmark_JSRT(model_name='gan_generator_model_post.hdf5' , im_shape= (400,400))
 
-            train_process_util.plot_metrics()
+            #train_process_util.plot_metrics() //TODO fix
 
     def save_imgs(self, epoch):
         path = root + '/Rx-thorax-automatic-captioning/image_dir_processed/'
