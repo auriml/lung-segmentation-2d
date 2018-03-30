@@ -3,6 +3,8 @@ from __future__ import print_function, division
 from keras.datasets import mnist
 from load_data import loadDataMontgomery, loadDataJSRT, loadDataGeneral
 from inference import remove_small_regions, masked, test_benchmark_JSRT
+from train_process_utils import TrainProcessUtil
+from keras import backend as K
 from keras import layers
 from keras.layers import Input, Dense, Reshape, Flatten, Dropout
 from keras.layers import BatchNormalization, Activation, ZeroPadding2D
@@ -59,22 +61,26 @@ class GAN():
         self.generator = load_model('gan_generator_model.hdf5')
 
 
-        #z = Input(shape=(100,)) #noise as input in classical GAN
 
         # The generator takes Rx as input and generated masks
-        z = Input(self.img_shape)
-        img = self.generator(z)
+        g_inputs = Input(self.img_shape)
+        g_masks = self.generator(g_inputs)
 
         # For the combined model we will only train the generator
         self.discriminator.trainable = False
 
-        # The valid takes generated images as input and determines validity
-        valid = self.discriminator(img)
+        # The valid takes generated generated masks as input and determines validity
+        combined_input = concatenate([g_inputs,g_masks], axis=3)
+        valid = self.discriminator(combined_input)
 
         # The combined model  (stacked generator and discriminator) takes
         # Rx images as input => generates masks => determines validity
-        self.combined = Model(z, valid)
-        self.combined.compile(loss='binary_crossentropy', optimizer=optimizer)
+        self.combined = Model(g_inputs, outputs=[g_masks,valid])
+        combined_loss = [dice_coef_loss,  'binary_crossentropy']
+        loss_weights = [ 1., 0.5]
+        metric_dict = [ Dice, 'accuracy']
+        self.combined.compile(loss=combined_loss,loss_weights= loss_weights,  optimizer=optimizer,  metrics=metric_dict)
+
 
     def residual_block(self, input, filters,kernel_size ):
         shortcut = input
@@ -89,31 +95,6 @@ class GAN():
         y = layers.BatchNormalization()(y)
         y = layers.LeakyReLU()(y)
         return y
-
-    def _build_generator(self):
-
-        noise_shape = (100,)
-        
-        model = Sequential()
-
-        model.add(Dense(256, input_shape=noise_shape))
-        model.add(LeakyReLU(alpha=0.2))
-        model.add(BatchNormalization(momentum=0.8))
-        model.add(Dense(512))
-        model.add(LeakyReLU(alpha=0.2))
-        model.add(BatchNormalization(momentum=0.8))
-        model.add(Dense(1024))
-        model.add(LeakyReLU(alpha=0.2))
-        model.add(BatchNormalization(momentum=0.8))
-        model.add(Dense(np.prod(self.img_shape), activation='tanh'))
-        model.add(Reshape(self.img_shape))
-
-        model.summary()
-
-        noise = Input(shape=noise_shape)
-        img = model(noise)
-
-        return Model(noise, img)
 
 
 
@@ -167,28 +148,11 @@ class GAN():
         return model
 
 
-    def _build_discriminator(self):
 
-        img_shape = (self.img_rows, self.img_cols, self.channels)
-        
-        model = Sequential()
-
-        model.add(Flatten(input_shape=img_shape))
-        model.add(Dense(512))
-        model.add(LeakyReLU(alpha=0.2))
-        model.add(Dense(256))
-        model.add(LeakyReLU(alpha=0.2))
-        model.add(Dense(1, activation='sigmoid'))
-        model.summary()
-
-        img = Input(shape=img_shape)
-        validity = model(img)
-
-        return Model(img, validity)
 
     def build_discriminator(self):
 
-        data = Input(shape=self.mask_shape)
+        data = Input(shape=(self.img_rows, self.img_cols,2)) #One channel for lung mask and a second channel for raw image TODO: increase channels for additional organ channel
         #Resblock 7x7, 8
         y = self.residual_block(data,filters=8, kernel_size=7)
 
@@ -233,57 +197,6 @@ class GAN():
         model.summary()
         return model
 
-    def _train(self, epochs, batch_size=128, save_interval=50):
-
-        # Load the dataset
-        (X_train, _), (_, _) = mnist.load_data()
-
-        # Rescale -1 to 1
-        X_train = (X_train.astype(np.float32) - 127.5) / 127.5
-        X_train = np.expand_dims(X_train, axis=3)
-
-        half_batch = int(batch_size / 2)
-
-        for epoch in range(epochs):
-
-            # ---------------------
-            #  Train Discriminator
-            # ---------------------
-
-            # Select a random half batch of images
-            idx = np.random.randint(0, X_train.shape[0], half_batch)
-            imgs = X_train[idx]
-
-            noise = np.random.normal(0, 1, (half_batch, 100))
-
-            # Generate a half batch of new images
-            gen_imgs = self.generator.predict(noise)
-
-            # Train the discriminator
-            d_loss_real = self.discriminator.train_on_batch(imgs, np.ones((half_batch, 1)))
-            d_loss_fake = self.discriminator.train_on_batch(gen_imgs, np.zeros((half_batch, 1)))
-            d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
-
-
-            # ---------------------
-            #  Train Generator
-            # ---------------------
-
-            noise = np.random.normal(0, 1, (batch_size, 100))
-
-            # The generator wants the discriminator to label the generated samples
-            # as valid (ones)
-            valid_y = np.array([1] * batch_size)
-
-            # Train the generator
-            g_loss = self.combined.train_on_batch(noise, valid_y)
-
-            # Plot the progress
-            print ("%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss))
-
-            # If at save interval => save generated image samples
-            if epoch % save_interval == 0:
-                self.save_imgs(epoch)
     def train(self, epochs, batch_size=128, save_interval=50):
 
         # Load the dataset
@@ -314,13 +227,9 @@ class GAN():
         test_gen = ImageDataGenerator(rescale=1.)
 
 
-        #(X_train, _), (_, _) = mnist.load_data()
-
-        # Rescale -1 to 1
-        #X_train = (X_train.astype(np.float32) - 127.5) / 127.5
-        #X_train = np.expand_dims(X_train, axis=3)
 
         half_batch = int(batch_size / 2)
+        train_process_util = TrainProcessUtil()
 
         for epoch in range(epochs):
             # When training involves critic network, for each mini-batch we perform 5 optimization steps
@@ -342,42 +251,45 @@ class GAN():
                         #  Train Discriminator
                         # ---------------------
 
-                        # Select half batch of masks
-                        masks = X_masks_train_batch[:half_batch]
 
-
-                        # Generate a half batch of images from noise
-                        #noise = np.random.normal(0, 1, (half_batch, 100))
-                        #gen_imgs = self.generator.predict(noise)
-
-                        # Generate a half batch of new masks from images
-                        # Select a random?? half batch of images or same images that originated the true discriminator masks above? TODO: test both alternatives
-                        imgs = X_train_batch[half_batch:]
-                        gen_masks = self.generator.predict(imgs)
+                        # Generate a  batch of new masks from images
+                        gen_masks = self.generator.predict(X_train_batch)
 
                         # Train the discriminator
-                        d_loss_real = self.discriminator.train_on_batch(masks, np.ones((half_batch, 1)))
-                        d_loss_fake = self.discriminator.train_on_batch(gen_masks, np.zeros((half_batch, 1)))
-                        d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
+                        discriminator_x_true = np.concatenate([X_train_batch, X_masks_train_batch], axis=3)
+                        discriminator_x_fake = np.concatenate([X_train_batch, gen_masks], axis=3)
+                        discriminator_x = np.concatenate([discriminator_x_true, discriminator_x_fake])
+                        discriminator_y = np.ones([2 * batch_size, 1])
+                        discriminator_y[batch_size:, :] = 0
+
+                        d_loss = self.discriminator.train_on_batch(discriminator_x, discriminator_y)
+                        discriminator_log_message = "%d: [Discriminator model loss: %f, accuracy: %f]" % (iteration, d_loss[0], d_loss[1])
+                        print(discriminator_log_message)
 
 
                     # ---------------------
                     #  Train Generator
                     # ---------------------
-                    print(str(epoch) + "-training generator")
-                    #noise = np.random.normal(0, 1, (batch_size, 100))
-                    imgs = X_train_batch[:batch_size]
+                    print(str(epoch) + "-training adversarial")
 
                     # The generator wants the discriminator to label the generated samples
                     # as valid (ones)
                     valid_y = np.array([1] * batch_size)
+                    label_dict = [ X_masks_train_batch, valid_y]
 
                     # Train the generator
-                    g_loss = self.combined.train_on_batch(imgs, valid_y)
+                    g_loss = self.combined.train_on_batch(X_train_batch, label_dict)
 
                     # Plot the progress
-                    print ("%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss))
+                    print ("%d [D loss: %f, acc.: %.2f%%] " % (epoch, d_loss[0], 100*d_loss[1]))
 
+                    metric_names = self.combined.metrics_names
+                    log_message = "%d:" % iteration
+                    for metric_index in range(len(metric_names)):
+                        train_process_util.update_metrics_dict(metric_names[metric_index], g_loss[metric_index])
+                        message = "%s: %f---" % ( metric_names[metric_index], g_loss[metric_index])
+                        log_message += message
+                    print(log_message)
                     iteration +=1
 
 
@@ -393,6 +305,8 @@ class GAN():
                 f.write("Epoch " + str(epoch) )
                 f.close()
                 test_benchmark_JSRT(model_name='gan_generator_model_post.hdf5' , im_shape= (400,400))
+
+            train_process_util.plot_metrics()
 
     def save_imgs(self, epoch):
         path = root + '/Rx-thorax-automatic-captioning/image_dir_processed/'
@@ -429,28 +343,21 @@ class GAN():
             i += 1
 
 
-        # r, c = 5, 5
-        # noise = np.random.normal(0, 1, (r * c, 100))
-        # gen_imgs = self.generator.predict(noise)
-        #
-        # # Rescale images 0 - 1
-        # gen_imgs = 0.5 * gen_imgs + 0.5
-        #
-        # fig, axs = plt.subplots(r, c)
-        # cnt = 0
-        # for i in range(r):
-        #     for j in range(c):
-        #         axs[i,j].imshow(gen_imgs[cnt, :,:,0], cmap='gray')
-        #         axs[i,j].axis('off')
-        #         cnt += 1
-        # fig.savefig(os.getcwd() + "/images/mnist_%d.png" % epoch)
-        # plt.close()
 
+def Dice(y_true, y_pred):
+    smooth = 1.
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    intersection = K.sum(y_true_f * y_pred_f)
+    return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+
+def dice_coef_loss(y_true, y_pred):
+    return -Dice(y_true, y_pred)
 
 if __name__ == '__main__':
     gan = GAN()
     #gan.train(epochs=30000, batch_size=32, save_interval=200)
-    gan.train(epochs=350, batch_size=8, save_interval=25)
+    gan.train(epochs=350, batch_size=4, save_interval=25)
 
 
 
