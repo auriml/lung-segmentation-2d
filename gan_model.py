@@ -238,7 +238,7 @@ class GAN():
             indexes = np.arange(X_train.shape[0])
             np.random.shuffle(indexes)
             indexes = np.array_split(indexes, X_train.shape[0]//batch_size)
-            indexes = [x for x in indexes if x != []]
+            indexes = [x for x in indexes if len(x) == batch_size]
             print(indexes)
 
             d_loss = None
@@ -276,7 +276,7 @@ class GAN():
 
                     # The generator wants the discriminator to label the generated samples
                     # as valid (ones)
-                    valid_y = np.array([1] * len(id))
+                    valid_y = np.array([1] * batch_size)
                     label_dict = [ X_masks_train_batch, valid_y]
 
                     # Train the generator
@@ -367,8 +367,8 @@ def dice_coef_loss(y_true, y_pred):
 if __name__ == '__main__':
     gan = GAN()
     #gan.train(epochs=30000, batch_size=32, save_interval=200)
-    gan.train(epochs=1000, batch_size=20, save_interval=25)
-    #gan.train(epochs=100, batch_size=4, save_interval=25)
+    #gan.train(epochs=1000, batch_size=20, save_interval=25)
+    gan.train(epochs=100, batch_size=4, save_interval=25)
 
 
 
