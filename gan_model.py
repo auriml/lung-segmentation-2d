@@ -239,12 +239,14 @@ class GAN():
             #indexes = np.array_split(indexes, [batch_size])
             indexes = np.split(indexes, [batch_size])
             indexes = [x for x in indexes if x != []]
+            print(indexes)
 
             d_loss = None
 
             k = 5 # a constant, how many times we train gen more than dis
             for iteration, id in enumerate( indexes):
                 for X_train_batch, X_masks_train_batch in train_gen.flow(X_train[id], X_masks_train[id], batch_size=batch_size, shuffle=True):
+
                     if iteration % k ==0:
                         print(str(epoch) + "-training discriminator")
                         # ---------------------
@@ -297,11 +299,11 @@ class GAN():
                     f = open('test_benchmark_JSRT', 'a')
                     f.write( log_message + '\n')
                     f.close()
-                    iteration +=1
 
-
-                    if iteration == len(indexes): #arbitray number of n times data augmentation (change to 1 to not increase training set)
+                    if iteration == 1: #arbitray number of n times data augmentation (change to 1 to not increase training set)
                         break
+
+                    iteration +=1
             # If at save interval => save generated image samples
             if epoch % save_interval == 0:
                 self.save_imgs(epoch)
@@ -365,7 +367,8 @@ def dice_coef_loss(y_true, y_pred):
 if __name__ == '__main__':
     gan = GAN()
     #gan.train(epochs=30000, batch_size=32, save_interval=200)
-    gan.train(epochs=350, batch_size=4, save_interval=25)
+    gan.train(epochs=1000, batch_size=20, save_interval=25)
+    #gan.train(epochs=100, batch_size=4, save_interval=25)
 
 
 
