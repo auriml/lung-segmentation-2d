@@ -276,7 +276,7 @@ class GAN():
 
                     # The generator wants the discriminator to label the generated samples
                     # as valid (ones)
-                    valid_y = np.array([1] * batch_size)
+                    valid_y = np.array([1] * len(id))
                     label_dict = [ X_masks_train_batch, valid_y]
 
                     # Train the generator
