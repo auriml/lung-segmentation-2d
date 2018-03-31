@@ -64,6 +64,7 @@ class GAN():
 
         # The generator takes Rx as input and generated masks
         g_inputs = Input(self.img_shape)
+        g_input_masks = Input(self.img_shape)
         g_masks = self.generator(g_inputs)
 
         # For the combined model we will only train the generator
@@ -75,9 +76,9 @@ class GAN():
 
         # The combined model  (stacked generator and discriminator) takes
         # Rx images as input => generates masks => determines validity
-        self.combined = Model(g_inputs, outputs=[g_masks,valid])
+        self.combined = Model(inputs= [g_input_masks, g_inputs], outputs=[g_masks,valid])
         combined_loss = ['binary_crossentropy',  'binary_crossentropy']
-        loss_weights = [ 1., 0.5]
+        loss_weights = [ 100, 1]
         metric_dict = [ Dice, 'accuracy']
         self.combined.compile(loss=combined_loss,loss_weights= loss_weights,  optimizer=optimizer,  metrics=metric_dict)
 
@@ -234,10 +235,9 @@ class GAN():
         for epoch in range(epochs):
             # When training involves critic network, for each mini-batch we perform 5 optimization steps
             # on the segmentation network for each optimization step on the critic network.
-            indexes = list(range(X_train.shape[0]))
+            indexes = np.arange(X_train.shape[0])
             np.random.shuffle(indexes)
-            #indexes = np.array_split(indexes, [batch_size])
-            indexes = np.split(indexes, [batch_size])
+            indexes = np.array_split(indexes, X_train.shape[0]//batch_size)
             indexes = [x for x in indexes if x != []]
             print(indexes)
 
@@ -280,7 +280,7 @@ class GAN():
                     label_dict = [ X_masks_train_batch, valid_y]
 
                     # Train the generator
-                    g_loss = self.combined.train_on_batch(X_train_batch, label_dict)
+                    g_loss = self.combined.train_on_batch([X_masks_train_batch,X_train_batch], label_dict)
 
                     # Plot the progress
                     message = "%d [D loss: %f, acc.: %.2f%%] " % (epoch, d_loss[0], 100*d_loss[1])
