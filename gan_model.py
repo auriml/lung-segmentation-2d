@@ -76,7 +76,7 @@ class GAN():
         # The combined model  (stacked generator and discriminator) takes
         # Rx images as input => generates masks => determines validity
         self.combined = Model(g_inputs, outputs=[g_masks,valid])
-        combined_loss = [dice_coef_loss,  'binary_crossentropy']
+        combined_loss = ['binary_crossentropy',  'binary_crossentropy']
         loss_weights = [ 1., 0.5]
         metric_dict = [ Dice, 'accuracy']
         self.combined.compile(loss=combined_loss,loss_weights= loss_weights,  optimizer=optimizer,  metrics=metric_dict)
