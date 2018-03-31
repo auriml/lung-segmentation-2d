@@ -284,7 +284,7 @@ class GAN():
                     message = "%d [D loss: %f, acc.: %.2f%%] " % (epoch, d_loss[0], 100*d_loss[1])
                     print (message)
                     f = open('test_benchmark_JSRT', 'a')
-                    f.write(message )
+                    f.write(message + '\n')
                     f.close()
 
                     metric_names = self.combined.metrics_names
@@ -295,7 +295,7 @@ class GAN():
                         log_message += message
                     print(log_message)
                     f = open('test_benchmark_JSRT', 'a')
-                    f.write(log_message )
+                    f.write( log_message + '\n')
                     f.close()
                     iteration +=1
 
@@ -309,7 +309,7 @@ class GAN():
                 self.generator.save('gan_discriminator_model.hdf5')
                 self.generator.save('gan_generator_model_post.hdf5')
                 f = open('test_benchmark_JSRT', 'a')
-                f.write("Epoch " + str(epoch) )
+                f.write("Epoch " + str(epoch) + '\n' )
                 f.close()
                 test_benchmark_JSRT(model_name='gan_generator_model_post.hdf5' , im_shape= (400,400))
 
@@ -353,8 +353,9 @@ class GAN():
 
 def Dice(y_true, y_pred):
     smooth = 1.
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
+    y_true_f = K.sigmoid(K.flatten(y_true))
+    y_pred_f = K.sigmoid(K.flatten(y_pred))
+
     intersection = K.sum(y_true_f * y_pred_f)
     return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
 
@@ -364,7 +365,7 @@ def dice_coef_loss(y_true, y_pred):
 if __name__ == '__main__':
     gan = GAN()
     #gan.train(epochs=30000, batch_size=32, save_interval=200)
-    gan.train(epochs=350, batch_size=10, save_interval=25)
+    gan.train(epochs=350, batch_size=4, save_interval=25)
 
 
 
