@@ -290,8 +290,8 @@ class GAN():
                     f.close()
 
 
-                    if index >= 1: #arbitray number of n times data augmentation (change to 1 to not increase training set)
-                        break
+                    #if index >= 1: #arbitray number of n times data augmentation (change to 1 to not increase training set)
+                    break
             # If at save interval => save generated image samples
             if epoch % save_interval == 0:
                 self.save_imgs(epoch)
