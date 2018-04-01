@@ -304,7 +304,7 @@ class GAN():
                 f.close()
                 test_benchmark_JSRT(model_name='gan_generator_model_post.hdf5' , im_shape= (400,400))
 
-            #train_process_util.plot_metrics() //TODO fix
+            train_process_util.plot_metrics()
 
     def save_imgs(self, epoch):
         path = root + '/Rx-thorax-automatic-captioning/image_dir_processed/'
@@ -356,8 +356,8 @@ def dice_coef_loss(y_true, y_pred):
 if __name__ == '__main__':
     gan = GAN()
     #gan.train(epochs=30000, batch_size=32, save_interval=200)
-    gan.train(epochs=1000, batch_size=20, save_interval=25)
-    #gan.train(epochs=100, batch_size=4, save_interval=25)
+    #gan.train(epochs=30000, batch_size=20, save_interval=25)
+    gan.train(epochs=1, batch_size=4, save_interval=25)
 
 
 

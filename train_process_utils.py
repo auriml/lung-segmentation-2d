@@ -14,15 +14,16 @@ class TrainProcessUtil:
         else:
             self.metrics[metric_name] = [metric_value]
 
-    # TODO: RIght now subplots are crowded in one row, should find a more decent way to display subplots.
+
     def plot_metrics(self):
         assert len(self.metrics) > 0
-        fig, ax = plt.subplots(ncols= len(self.metrics), nrows=1)
+        fig, ax = plt.subplots()
         metric_tuple = tuple(self.metrics.items())
-
+        x = np.linspace(0,len(metric_tuple[0][1])-1,len(metric_tuple[0][1]))
         for i in range(len(self.metrics)):
-            ax[i].plot(metric_tuple[i][1])
-            ax[i].set_title(metric_tuple[i][0])
+            ax.plot(x, metric_tuple[i][1], label = metric_tuple[i][0])
+
+        ax.legend(loc='lower right')
         plt.savefig('plot')
 
 
