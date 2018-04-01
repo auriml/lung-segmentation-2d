@@ -295,7 +295,7 @@ class GAN():
                     break
             # If at save interval => save generated image samples
             if epoch % save_interval == 0:
-                self.save_imgs(epoch)
+                #self.save_imgs(epoch)
                 self.combined.save('gan_combined_model.hdf5')
                 self.generator.save('gan_discriminator_model.hdf5')
                 self.generator.save('gan_generator_model_post.hdf5')
@@ -303,6 +303,7 @@ class GAN():
                 f.write("Epoch " + str(epoch) + '\n' )
                 f.close()
                 test_benchmark_JSRT(model_name='gan_generator_model_post.hdf5' , im_shape= (400,400))
+                train_process_util.plot_metrics()
 
             train_process_util.plot_metrics()
 
@@ -356,7 +357,7 @@ def dice_coef_loss(y_true, y_pred):
 if __name__ == '__main__':
     gan = GAN()
     #gan.train(epochs=30000, batch_size=32, save_interval=200)
-    gan.train(epochs=30000, batch_size=20, save_interval=25)
+    gan.train(epochs=30000, batch_size=20, save_interval=1000)
     #gan.train(epochs=1, batch_size=4, save_interval=25)
 
 
