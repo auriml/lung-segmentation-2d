@@ -228,45 +228,34 @@ class GAN():
         test_gen = ImageDataGenerator(rescale=1.)
 
 
-
-        half_batch = int(batch_size / 2)
         train_process_util = TrainProcessUtil()
 
         for epoch in range(epochs):
-            # When training involves critic network, for each mini-batch we perform 5 optimization steps
-            # on the segmentation network for each optimization step on the critic network.
-            indexes = np.arange(X_train.shape[0])
-            np.random.shuffle(indexes)
-            indexes = np.array_split(indexes, X_train.shape[0]//batch_size)
-            indexes = [x for x in indexes if len(x) == batch_size]
-            print(indexes)
-
             d_loss = None
 
-            k = 5 # a constant, how many times we train gen more than dis
-            for iteration, id in enumerate( indexes):
+            for index in range(int(X_train.shape[0]/batch_size)):
+                id = np.arange(index*batch_size, (index+1)*batch_size)
                 for X_train_batch, X_masks_train_batch in train_gen.flow(X_train[id], X_masks_train[id], batch_size=batch_size, shuffle=True):
 
-                    if iteration % k ==0:
-                        print(str(epoch) + "-training discriminator")
-                        # ---------------------
-                        #  Train Discriminator
-                        # ---------------------
+                    print(str(epoch) + "-training discriminator")
+                    # ---------------------
+                    #  Train Discriminator
+                    # ---------------------
 
 
-                        # Generate a  batch of new masks from images
-                        gen_masks = self.generator.predict(X_train_batch)
+                    # Generate a  batch of new masks from images
+                    gen_masks = self.generator.predict(X_train_batch)
 
-                        # Train the discriminator
-                        discriminator_x_true = np.concatenate([X_train_batch, X_masks_train_batch], axis=3)
-                        discriminator_x_fake = np.concatenate([X_train_batch, gen_masks], axis=3)
-                        discriminator_x = np.concatenate([discriminator_x_true, discriminator_x_fake])
-                        discriminator_y = np.ones([2 * batch_size, 1])
-                        discriminator_y[batch_size:, :] = 0
+                    # Train the discriminator
+                    discriminator_x_true = np.concatenate([X_train_batch, X_masks_train_batch], axis=3)
+                    discriminator_x_fake = np.concatenate([X_train_batch, gen_masks], axis=3)
+                    discriminator_x = np.concatenate([discriminator_x_true, discriminator_x_fake])
+                    discriminator_y = np.ones([2 * batch_size, 1])
+                    discriminator_y[batch_size:, :] = 0
 
-                        d_loss = self.discriminator.train_on_batch(discriminator_x, discriminator_y)
-                        discriminator_log_message = "%d: [Discriminator model loss: %f, accuracy: %f]" % (iteration, d_loss[0], d_loss[1])
-                        print(discriminator_log_message)
+                    d_loss = self.discriminator.train_on_batch(discriminator_x, discriminator_y)
+                    discriminator_log_message = "%d: [Discriminator model loss: %f, accuracy: %f]" % (index, d_loss[0], d_loss[1])
+                    print(discriminator_log_message)
 
 
                     # ---------------------
@@ -283,14 +272,14 @@ class GAN():
                     g_loss = self.combined.train_on_batch([X_masks_train_batch,X_train_batch], label_dict)
 
                     # Plot the progress
-                    message = "%d [D loss: %f, acc.: %.2f%%] " % (epoch, d_loss[0], 100*d_loss[1])
+                    message = "%d [D loss: %f, acc.: %.2f%%] " % (index, d_loss[0], 100*d_loss[1])
                     print (message)
                     f = open('test_benchmark_JSRT', 'a')
                     f.write(message + '\n')
                     f.close()
 
                     metric_names = self.combined.metrics_names
-                    log_message = "%d:" % iteration
+                    log_message = "%d:" % index
                     for metric_index in range(len(metric_names)):
                         train_process_util.update_metrics_dict(metric_names[metric_index], g_loss[metric_index])
                         message = "%s: %f   " % ( metric_names[metric_index], g_loss[metric_index])
@@ -301,9 +290,7 @@ class GAN():
                     f.close()
 
 
-
-                    iteration +=1
-                    if iteration >= 1: #arbitray number of n times data augmentation (change to 1 to not increase training set)
+                    if index >= 1: #arbitray number of n times data augmentation (change to 1 to not increase training set)
                         break
             # If at save interval => save generated image samples
             if epoch % save_interval == 0:
@@ -368,8 +355,8 @@ def dice_coef_loss(y_true, y_pred):
 if __name__ == '__main__':
     gan = GAN()
     #gan.train(epochs=30000, batch_size=32, save_interval=200)
-    gan.train(epochs=1000, batch_size=20, save_interval=25)
-    #gan.train(epochs=100, batch_size=4, save_interval=25)
+    #gan.train(epochs=1000, batch_size=20, save_interval=25)
+    gan.train(epochs=100, batch_size=4, save_interval=25)
 
 
 
