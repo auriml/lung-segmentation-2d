@@ -207,7 +207,8 @@ class GAN():
         df['mask filename'] = df.apply(lambda row: str(row.filename).replace('.png' , 'msk.png'), axis=1)
         # Shuffle rows in dataframe. Random state is set for reproducibility.
         df = df.sample(frac=1, random_state=23)
-        n_train = int(len(df)*0.8)
+        train = 1 #change to 0.8 to spare a validation set
+        n_train = int(len(df)*train)
         df_train = df[:n_train]
         df_val = df[n_train:]
 
