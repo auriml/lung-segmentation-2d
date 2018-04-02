@@ -63,22 +63,22 @@ class GAN():
 
 
         # The generator takes Rx as input and generated masks
-        g_inputs = Input(self.img_shape)
-        g_input_masks = Input(self.img_shape)
-        g_masks = self.generator(g_inputs)
+        X_masks = Input(self.img_shape)
+        X = Input(self.img_shape)
+        gen_masks = self.generator(X_masks)
 
         # For the combined model we will only train the generator
         self.discriminator.trainable = False
 
-        # The valid takes generated generated masks as input and determines validity
-        combined_input = concatenate([g_inputs,g_masks], axis=3)
+        # The valid takes generated  masks as input and determines validity
+        combined_input = concatenate([gen_masks, X], axis=3)
         valid = self.discriminator(combined_input)
 
         # The combined model  (stacked generator and discriminator) takes
         # Rx images as input => generates masks => determines validity
-        self.combined = Model(inputs= [g_input_masks, g_inputs], outputs=[g_masks,valid])
-        combined_loss = ['binary_crossentropy',  'binary_crossentropy']
-        loss_weights = [ 100, 1]
+        self.combined = Model(inputs= [X_masks, X], outputs=[valid, gen_masks])
+        combined_loss = ['binary_crossentropy',  'mae']
+        loss_weights = [ 1, 100]
         metric_dict = [ Dice, 'accuracy']
         self.combined.compile(loss=combined_loss,loss_weights= loss_weights,  optimizer=optimizer,  metrics=metric_dict)
 
@@ -142,7 +142,7 @@ class GAN():
         #y = layers.Conv2DTranspose(filters= 4,kernel_size=(32, 32),strides = (16,16), padding="same")(y)
 
         #Deconvolution 32 x 32, stride 16, filters 1 (output 1 channel if only lungs mask) TODO: use 4 channels for heart + 2 lungs + background
-        y = layers.Conv2DTranspose(filters= 1,kernel_size=(32, 32),strides = (16,16), padding="same")(y)
+        y = layers.Conv2DTranspose(filters= 1,kernel_size=(32, 32),strides = (16,16), padding="same", activation="tanh")(y)
         output = y
         model = Model(data, output)
         model.summary()
@@ -218,6 +218,8 @@ class GAN():
         #X_train, X_masks_train = loadDataJSRT(df_train, path, im_shape, n_images=10) #TODO: n_images is only for testing/debugging
         X_train, X_masks_train = loadDataJSRT(df_train, path, im_shape)
 
+
+
         train_gen = ImageDataGenerator(rotation_range=10,
                                        width_shift_range=0.1,
                                        height_shift_range=0.1,
@@ -230,13 +232,14 @@ class GAN():
 
 
         train_process_util = TrainProcessUtil()
-
+        d_acc = 0.0
         for epoch in range(epochs):
-            d_loss = None
+
 
             for index in range(int(X_train.shape[0]/batch_size)):
                 id = np.arange(index*batch_size, (index+1)*batch_size)
                 for X_train_batch, X_masks_train_batch in train_gen.flow(X_train[id], X_masks_train[id], batch_size=batch_size, shuffle=True):
+
 
                     print(str(epoch) + "-training discriminator")
                     # ---------------------
@@ -246,17 +249,27 @@ class GAN():
 
                     # Generate a  batch of new masks from images
                     gen_masks = self.generator.predict(X_train_batch)
+                    #Binarize masks
+                    gen_masks = gen_masks > 0.5
+
 
                     # Train the discriminator
-                    discriminator_x_true = np.concatenate([X_train_batch, X_masks_train_batch], axis=3)
-                    discriminator_x_fake = np.concatenate([X_train_batch, gen_masks], axis=3)
-                    discriminator_x = np.concatenate([discriminator_x_true, discriminator_x_fake])
-                    discriminator_y = np.ones([2 * batch_size, 1])
-                    discriminator_y[batch_size:, :] = 0
+                    discriminator_x_true = np.concatenate([X_masks_train_batch,X_train_batch], axis=3)
+                    y_valid = np.ones([batch_size, 1])
+                    d_loss_real = self.discriminator.train_on_batch(discriminator_x_true, y_valid)
 
-                    d_loss = self.discriminator.train_on_batch(discriminator_x, discriminator_y)
+                    discriminator_x_fake = np.concatenate([gen_masks,X_train_batch], axis=3)
+                    y_fake= np.zeros([batch_size, 1])
+                    d_loss_fake = self.discriminator.train_on_batch(discriminator_x_fake, y_fake)
+                    d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
+
+
+                    d_acc = d_loss[1]
                     discriminator_log_message = "%d: [Discriminator model loss: %f, accuracy: %f]" % (index, d_loss[0], d_loss[1])
                     print(discriminator_log_message)
+                    f = open('test_benchmark_JSRT', 'a')
+                    f.write(discriminator_log_message + '\n')
+                    f.close()
 
 
                     # ---------------------
@@ -267,18 +280,12 @@ class GAN():
                     # The generator wants the discriminator to label the generated samples
                     # as valid (ones)
                     valid_y = np.array([1] * batch_size)
-                    label_dict = [ X_masks_train_batch, valid_y]
+
 
                     # Train the generator
-                    g_loss = self.combined.train_on_batch([X_masks_train_batch,X_train_batch], label_dict)
+                    g_loss = self.combined.train_on_batch([X_masks_train_batch,X_train_batch], [valid_y, X_masks_train_batch])
 
                     # Plot the progress
-                    message = "%d [D loss: %f, acc.: %.2f%%] " % (index, d_loss[0], 100*d_loss[1])
-                    print (message)
-                    f = open('test_benchmark_JSRT', 'a')
-                    f.write(message + '\n')
-                    f.close()
-
                     metric_names = self.combined.metrics_names
                     log_message = "%d:" % index
                     for metric_index in range(len(metric_names)):
@@ -345,8 +352,8 @@ class GAN():
 
 def Dice(y_true, y_pred):
     smooth = 1.
-    y_true_f = K.sigmoid(K.flatten(y_true))
-    y_pred_f = K.sigmoid(K.flatten(y_pred))
+    y_true_f = K.round(K.sigmoid(K.flatten(y_true)))
+    y_pred_f = K.round(K.sigmoid(K.flatten(y_pred)))
 
     intersection = K.sum(y_true_f * y_pred_f)
     return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
@@ -357,8 +364,8 @@ def dice_coef_loss(y_true, y_pred):
 if __name__ == '__main__':
     gan = GAN()
     #gan.train(epochs=30000, batch_size=32, save_interval=200)
-    gan.train(epochs=30000, batch_size=20, save_interval=1000)
-    #gan.train(epochs=1, batch_size=4, save_interval=25)
+    gan.train(epochs=30000, batch_size=1, save_interval=25)
+    #gan.train(epochs=350, batch_size=1, save_interval=25)
 
 
 
