@@ -65,7 +65,7 @@ class GAN():
         # The generator takes Rx as input and generated masks
         X_masks = Input(self.img_shape)
         X = Input(self.img_shape)
-        gen_masks = self.generator(X_masks)
+        gen_masks = self.generator(X)
 
         # For the combined model we will only train the generator
         self.discriminator.trainable = False
