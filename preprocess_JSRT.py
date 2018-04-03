@@ -36,5 +36,30 @@ def make_masks():
             io.imsave(root + '/JSRT/new/' + filename[:-4] + 'msk.png', np.clip(left + right, 0, 255))
             print ('Mask', i, filename)
 
-make_lungs()
-make_masks()
+def make_clav_heart_masks():
+    # both clavicles and heart do not overlap  and can be included in a single mask
+    path = root + '/JSRT/All247images/'
+    for i, filename in enumerate(os.listdir(path)):
+        filepath1_left = root + '/JSRT/JSRT_segmented/fold1/masks/left clavicle/' + filename[:-4] + '.gif'
+        filepath1_right = root + '/JSRT/JSRT_segmented/fold1/masks/right clavicle/' + filename[:-4] + '.gif'
+        filepath1_heart = root + '/JSRT/JSRT_segmented/fold1/masks/heart/' + filename[:-4] + '.gif'
+        filepath2_left = root + '/JSRT/JSRT_segmented/fold2/masks/left clavicle/' + filename[:-4] + '.gif'
+        filepath2_right = root + '/JSRT/JSRT_segmented/fold2/masks/right clavicle/' + filename[:-4] + '.gif'
+        filepath2_heart = root + '/JSRT/JSRT_segmented/fold2/masks/heart/' + filename[:-4] + '.gif'
+
+        if os.path.isfile(filepath1_left):
+            left = io.imread(filepath1_left )
+            right = io.imread(filepath1_right)
+            heart = io.imread(filepath1_heart )
+            io.imsave(root + '/JSRT/new/' + filename[:-4] + 'clav_heart_msk.png', np.clip(left + right + heart, 0, 255))
+            print ('Mask', i, filename)
+        elif os.path.isfile(filepath2_left):
+            left = io.imread(filepath2_left)
+            right = io.imread(filepath2_right)
+            heart = io.imread(filepath1_heart )
+            io.imsave(root + '/JSRT/new/' + filename[:-4] + 'clav_heart_msk.png', np.clip(left + right + heart, 0, 255))
+            print ('Mask', i, filename)
+
+#make_lungs()
+#make_masks()
+make_clav_heart_masks()
