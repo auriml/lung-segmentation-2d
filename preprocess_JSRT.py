@@ -60,7 +60,7 @@ def make_clav_heart_masks():
         elif os.path.isfile(filepath2_left):
             left = io.imread(filepath2_left)
             right = io.imread(filepath2_right)
-            heart = io.imread(filepath1_heart )
+            heart = io.imread(filepath2_heart )
             io.imsave(root + '/JSRT/new/' + filename[:-4] + 'clav_heart_msk.png', np.clip(left + right + heart, 0, 255))
             print ('Mask', i, filename)
 
