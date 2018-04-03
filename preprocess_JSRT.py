@@ -7,8 +7,12 @@ Data is preprocessed in the following ways:
     - equalize histogram (skimage.exposure.equalize_hist);
    
 """
+currentroot = os.getcwd()
+os.chdir("../")
+root = os.getcwd()
+os.chdir(currentroot)
 
-root = '/Volumes/auri\'s home-4'
+
 def make_lungs():
     path = root + '/JSRT/All247images/'
     for i, filename in enumerate(os.listdir(path)):
