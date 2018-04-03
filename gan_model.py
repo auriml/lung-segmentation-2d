@@ -44,7 +44,7 @@ class GAN():
         self.img_shape = (self.img_rows, self.img_cols, self.channels)
         self.mask_shape = (self.img_rows, self.img_cols, self.mask_channels)
 
-        optimizer = Adam(0.0002, 0.5)
+        optimizer = Adam(0.0001, 0.5)
 
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
@@ -261,6 +261,8 @@ class GAN():
                     discriminator_x_fake = np.concatenate([gen_masks,X_train_batch], axis=3)
                     y_fake= np.zeros([batch_size, 1])
                     d_loss_fake = self.discriminator.train_on_batch(discriminator_x_fake, y_fake)
+                    print('fake ' + str(d_loss_fake[1]))
+                    print('real ' + str(d_loss_real[1]))
                     d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
 
 
