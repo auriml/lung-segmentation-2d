@@ -14,7 +14,7 @@ It may be more convenient to store preprocessed data for faster loading.
 Dataframe should contain paths to images and masks as two columns (relative to `path`).
 """
 
-def loadDataJSRT(df, path, im_shape, n_images = None):
+def loadDataJSRT(df, path, im_shape, n_images = None, load_clav_heart_masks=True):
     """This function loads data preprocessed with `preprocess_JSRT.py`"""
     X, y = [], []
     images = df.iterrows() if n_images is None else df[:n_images].iterrows()
@@ -25,6 +25,11 @@ def loadDataJSRT(df, path, im_shape, n_images = None):
         mask = io.imread(path + item[1])
         mask = transform.resize(mask, im_shape)
         mask = np.expand_dims(mask, -1)
+        if load_clav_heart_masks:
+            clav_heart_mask = io.imread((path + item[1]).replace('msk.png', 'clav_heart_msk.png') )
+            clav_heart_mask = transform.resize(clav_heart_mask, im_shape)
+            clav_heart_mask = np.expand_dims(clav_heart_mask, -1)
+            mask = np.concatenate([mask, clav_heart_mask], axis = 2)
         X.append(img)
         y.append(mask)
     X = np.array(X)

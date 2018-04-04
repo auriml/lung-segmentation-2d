@@ -31,15 +31,24 @@ def Dice(y_true, y_pred):
     return (2. * intersection + 1.) / (y_true.sum() + y_pred.sum() + 1.)
 
 def masked_withGT(img, gt, mask, alpha=1):
-    """Returns image with GT lung field outlined with red, predicted lung field
-    filled with blue."""
+    """Returns image with GT  fields outlined with red, predicted lung field
+    filled with blue and predicted clavicles and heart fillwed with green."""
+    #mask = gt
     rows, cols = img.shape
     color_mask = np.zeros((rows, cols, 3))
-    dilation = morphology.dilation(gt, morphology.disk(3))
-    boundary = np.subtract(dilation, gt, dtype=np.float)
-    #boundary = morphology.dilation(gt, morphology.disk(3)) - gt
-    color_mask[mask == 1] = [0, 0, 1]
-    color_mask[boundary == 1] = [1, 0, 0]
+    if mask.shape[2] is None: #there is a single layer mask (lung fields)
+        gt = np.expand_dims(gt, axis = -1)
+        color_mask[mask == 1] = [0, 0, 1]
+    else: #there are two layer masks (lung fields mask and clavicles&heart mask)
+        color_mask[mask[:,:,0] == 1] = [0, 0, 1] #blue lungs
+        color_mask[mask[:,:,1] == 1] = [0, 1, 0] #green clavicles&heart
+
+    for dim in range(gt.shape[2]):
+        dilation = morphology.dilation(gt[:,:,dim], morphology.disk(3))
+        boundary = np.subtract(dilation, gt[:,:,dim], dtype=np.float)
+        color_mask[boundary == 1] = [1, 0, 0]
+
+
     img_color = np.dstack((img, img, img))
 
     img_hsv = color.rgb2hsv(img_color)
@@ -53,10 +62,15 @@ def masked_withGT(img, gt, mask, alpha=1):
 
 def masked(img,  mask, alpha=1):
     """Returns image with  predicted lung field
-    filled with blue."""
+    filled with blue and predicted clavicles and heart fillwed with green."""
     rows, cols = img.shape
     color_mask = np.zeros((rows, cols, 3))
-    color_mask[mask == 1] = [0, 0, 1]
+    if mask.shape[2] is None: #there is a single layer mask (lung fields)
+        color_mask[mask == 1] = [0, 0, 1]
+    else: #there are two layer masks (lung fields mask and clavicles&heart mask)
+        color_mask[mask[:,:,0] == 1] = [0, 0, 1] #blue lungs
+        color_mask[mask[:,:,1] == 1] = [0, 1, 0] #green clavicles&heart
+
     img_color = np.dstack((img, img, img))
 
     img_hsv = color.rgb2hsv(img_color)
@@ -102,8 +116,11 @@ def test_benchmark_JSRT(model_name = 'UNet_trained_model.hdf5', im_shape = (256,
 
     for xx, yy in test_gen.flow(X, y, batch_size=1, shuffle=False):
         img = exposure.rescale_intensity(np.squeeze(xx), out_range=(0,1))
-        pred = model.predict(xx)[..., 0].reshape(inp_shape[:2])
-        mask = yy[..., 0].reshape(inp_shape[:2])
+        pred = model.predict(xx)
+        pred = np.squeeze(pred)
+        mask = np.squeeze(yy)
+        #pred = pred[..., 0].reshape(inp_shape[:2])
+        #mask = yy[..., 0].reshape(inp_shape[:2])
 
         #Binarize masks
         gt = mask > 0.5
@@ -170,7 +187,7 @@ def segment_SanJuan_dataset(model_name = 'UNet_trained_model.hdf5', im_shape = (
 if __name__ == '__main__':
 
     #test_benchmark_JSRT(model_name='UNet_trained_model.hdf5', im_shape = (256, 256))
-    test_benchmark_JSRT(model_name='gan_generator_model.hdf5' , im_shape= (400,400))
+    #test_benchmark_JSRT(model_name='gan_generator_model.hdf5' , im_shape= (400,400))
     test_benchmark_JSRT(model_name='gan_generator_model_post.hdf5' , im_shape= (400,400))
     #segment_SanJuan_dataset(model_name='UNet_trained_model.hdf5' , im_shape= (256,256) , n_images = 30)
     #segment_SanJuan_dataset(model_name='gan_generator_model.hdf5' , im_shape= (400,400) , n_images = 30)

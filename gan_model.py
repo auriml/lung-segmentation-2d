@@ -39,8 +39,8 @@ class GAN():
         self.img_rows = 400
         self.img_cols = 400
         self.channels = 1
-        #self.mask_channels = 4
-        self.mask_channels = 1
+        self.mask_channels = 2 #both lungs in one channel and heart and both clavicles in a second channel
+        #self.mask_channels = 1
         self.img_shape = (self.img_rows, self.img_cols, self.channels)
         self.mask_shape = (self.img_rows, self.img_cols, self.mask_channels)
 
@@ -48,22 +48,22 @@ class GAN():
 
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
-        self.discriminator.compile(loss='binary_crossentropy', 
+        self.discriminator.compile(loss='binary_crossentropy',
             optimizer=optimizer,
             metrics=['accuracy'])
 
         # Build and compile the generator
-        #self.generator = self.build_generator()
-        #self.generator.compile(loss='binary_crossentropy', optimizer=optimizer)
+        self.generator = self.build_generator()
+        self.generator.compile(loss='binary_crossentropy', optimizer=optimizer)
 
         #Load pretrained generator
         # Load model
-        self.generator = load_model('gan_generator_model.hdf5')
+        #self.generator = load_model('gan_generator_model.hdf5')
 
 
 
         # The generator takes Rx as input and generated masks
-        X_masks = Input(self.img_shape)
+        X_masks = Input(self.mask_shape)
         X = Input(self.img_shape)
         gen_masks = self.generator(X)
 
@@ -141,8 +141,8 @@ class GAN():
         #Deconvolution 32 x 32, stride 16, filters 4
         #y = layers.Conv2DTranspose(filters= 4,kernel_size=(32, 32),strides = (16,16), padding="same")(y)
 
-        #Deconvolution 32 x 32, stride 16, filters 1 (output 1 channel if only lungs mask) TODO: use 4 channels for heart + 2 lungs + background
-        y = layers.Conv2DTranspose(filters= 1,kernel_size=(32, 32),strides = (16,16), padding="same", activation="tanh")(y)
+        #Deconvolution 32 x 32, stride 16, filters 1 (output 1 channel if only lungs mask)
+        y = layers.Conv2DTranspose(filters= self.mask_channels,kernel_size=(32, 32),strides = (16,16), padding="same", activation="sigmoid")(y)
         output = y
         model = Model(data, output)
         model.summary()
@@ -153,7 +153,7 @@ class GAN():
 
     def build_discriminator(self):
 
-        data = Input(shape=(self.img_rows, self.img_cols,2)) #One channel for lung mask and a second channel for raw image TODO: increase channels for additional organ channel
+        data = Input(shape=(self.img_rows, self.img_cols, self.mask_channels + self.channels )) #The necessary channels  mask and a second channel for raw image
         #Resblock 7x7, 8
         y = self.residual_block(data,filters=8, kernel_size=7)
 
