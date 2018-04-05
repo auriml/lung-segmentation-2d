@@ -8,7 +8,11 @@ Data is preprocessed in the following ways:
    
 """
 
-root = '/Volumes/auri\'s home-5/'
+currentroot = os.getcwd()
+os.chdir("../")
+root = os.getcwd()
+os.chdir(currentroot)
+
 def make_lungs():
     path = root + 'Rx-thorax-automatic-captioning'
     lstFilesDCM = []  # create an empty list
@@ -21,6 +25,7 @@ def make_lungs():
     for i, filename in enumerate(lstFilesDCM):
         e = np.fromfile(filename, dtype='>u2')
         RefDs = dicom.read_file(filename)
+        print(RefDs)
         # Load dimensions based on the number of rows, columns
         ConstPixelDims = (int(RefDs.Rows), int(RefDs.Columns))
         # Load spacing values (in mm)
@@ -39,6 +44,18 @@ def make_lungs():
         io.imsave(path + '/image_dir_processed/' + filename[-10:-4] + '.png', img)
         print ('Lung', i, filename)
 
+def printDicomInfo():
+    path = root + 'Rx-thorax-automatic-captioning'
+    lstFilesDCM = []  # create an empty list
+    for dirName, subdirList, fileList in os.walk(path):
+        for filename in fileList:
+            if ".dcm" in filename.lower():  # check whether the file's DICOM
+                lstFilesDCM.append(os.path.join(dirName,filename))
+    for i, filename in enumerate(lstFilesDCM):
+        e = np.fromfile(filename, dtype='>u2')
+        RefDs = dicom.read_file(filename)
+        print(RefDs)
 
-make_lungs()
 
+#make_lungs()
+printDicomInfo()
