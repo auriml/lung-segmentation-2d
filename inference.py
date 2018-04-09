@@ -147,7 +147,7 @@ def test_benchmark_JSRT(model_name = 'UNet_trained_model.hdf5', im_shape = (256,
 
 def segment_SanJuan_dataset(model_name = 'UNet_trained_model.hdf5', im_shape = (256, 256), n_images = None):
     #Load SanJuan dataset
-    path = root + '/Rx-thorax-automatic-captioning/image_dir_processed/'
+    path = root + '/SJ/image_dir_processed/'
     y = [s for s in os.listdir(path) if not s.endswith('msk.png')]
     df = pd.DataFrame({'filename':y})
     df['mask filename'] = df.apply(lambda row: str(row.filename).replace('.png' , 'msk.png'), axis=1)
@@ -187,7 +187,7 @@ def segment_SanJuan_dataset(model_name = 'UNet_trained_model.hdf5', im_shape = (
 if __name__ == '__main__':
 
     #test_benchmark_JSRT(model_name='UNet_trained_model.hdf5', im_shape = (256, 256))
-    test_benchmark_JSRT(model_name='gan_generator_model.hdf5' , im_shape= (400,400))
+    #test_benchmark_JSRT(model_name='gan_generator_model.hdf5' , im_shape= (400,400))
     #test_benchmark_JSRT(model_name='gan_generator_model_post.hdf5' , im_shape= (400,400))
     #segment_SanJuan_dataset(model_name='UNet_trained_model.hdf5' , im_shape= (256,256) , n_images = 30)
-    #segment_SanJuan_dataset(model_name='gan_generator_model.hdf5' , im_shape= (400,400) , n_images = 30)
+    segment_SanJuan_dataset(model_name='gan_generator_model.hdf5' , im_shape= (400,400) , n_images = 30)

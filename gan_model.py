@@ -317,7 +317,7 @@ class GAN():
             train_process_util.plot_metrics()
 
     def save_imgs(self, epoch):
-        path = root + '/Rx-thorax-automatic-captioning/image_dir_processed/'
+        path = root + '/SJ/image_dir_processed/'
         y = [s for s in os.listdir(path) if not s.endswith('msk.png')]
         df = pd.DataFrame({'filename':y})
         df['mask filename'] = df.apply(lambda row: str(row.filename).replace('.png' , 'msk.png'), axis=1)
